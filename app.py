@@ -3,55 +3,40 @@ import pandas as pd
 import numpy as np
 import joblib
 
-# Load model and columns
-model = joblib.load("car_price_model.pkl")
-columns = joblib.load("car_columns.pkl")
+# Load model
+model = joblib.load("vot_reg.pkl")
 
-st.set_page_config(page_title="Car Price Prediction", layout="centered")
+st.set_page_config(page_title="Car Price Prediction")
 
-st.title("🚗 Car Price Prediction App")
-st.write("Enter car details to predict the selling price")
+st.title("🚗 Car Price Prediction")
 
-# -------------------------
-# User Inputs
-# -------------------------
-company = st.selectbox("Company", ["Audi", "BMW", "Hyundai", "Maruti", "Honda"])
-fuel_type = st.selectbox("Fuel Type", ["Petrol", "Diesel", "CNG"])
-transmission = st.selectbox("Transmission", ["Manual", "Automatic"])
-owner = st.selectbox("Owner Type", ["First", "Second", "Third"])
-
-year = st.number_input("Year of Purchase", 2000, 2025, step=1)
+# User Inputs (MATCH THESE WITH TRAINING FEATURES)
+year = st.number_input("Year", 2000, 2025, step=1)
 kms_driven = st.number_input("Kilometers Driven", 0, 300000, step=500)
 engine = st.number_input("Engine (CC)", 500, 5000, step=100)
 mileage = st.number_input("Mileage (km/l)", 5.0, 40.0, step=0.5)
 
-# -------------------------
-# Predict Button
-# -------------------------
+fuel_type = st.selectbox("Fuel Type", ["Petrol", "Diesel", "CNG"])
+transmission = st.selectbox("Transmission", ["Manual", "Automatic"])
+
 if st.button("Predict Price"):
-    
-    # Create input dataframe
-    input_data = {
-        "company": company,
-        "fuel_type": fuel_type,
-        "transmission": transmission,
-        "owner": owner,
+
+    input_data = pd.DataFrame([{
         "year": year,
         "kms_driven": kms_driven,
         "engine": engine,
-        "mileage": mileage
-    }
+        "mileage": mileage,
+        "fuel_type": fuel_type,
+        "transmission": transmission
+    }])
 
-    df = pd.DataFrame([input_data])
+    # One-hot encode
+    input_data = pd.get_dummies(input_data)
 
-    # One-hot encoding
-    df_encoded = pd.get_dummies(df)
+    # Fix missing columns (important!)
+    model_features = model.feature_names_in_
+    input_data = input_data.reindex(columns=model_features, fill_value=0)
 
-    # Align columns with training data
-    df_encoded = df_encoded.reindex(columns=columns, fill_value=0)
+    prediction = model.predict(input_data)[0]
 
-    # Prediction
-    prediction = model.predict(df_encoded)[0]
-
-    st.success(f"💰 Estimated Car Price: ₹ {round(prediction, 2)}")
-
+    st.success(f"💰 Predicted Car Price: ₹ {round(prediction, 2)}")
