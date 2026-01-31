@@ -1,59 +1,57 @@
 import streamlit as st
 import pandas as pd
-import random
-from sklearn.preprocessing import StandardScaler
-import pickle
-col = ['MedInc', 'HouseAge', 'AveRooms', 'AveBedrms', 'Population', 'AveOccup']
-st.title("California Housing price prediction")
-st.image('https://0701.static.prezi.com/preview/v2/f524s3b7ixvvb7lkkxa2ouskoh6jc3sachvcdoaizecfr3dnitcq_3_0.png')
-st.header('Model of housing prices to predict median house values in California',divider=True)
+import numpy as np
+import joblib
 
-st.sidebar.title('Select House Features 🏠')
-st.sidebar.image('https://cdn.pixabay.com/photo/2016/08/16/03/39/home-1597079_1280.jpg')
-st.sidebar.image('https://static.vecteezy.com/system/resources/previews/026/586/537/large_2x/beautiful-modern-house-exterior-with-grass-field-modern-residential-district-and-minimalist-building-concept-by-ai-generated-free-photo.jpg')
+# Load model and columns
+model = joblib.load("car_price_model.pkl")
+columns = joblib.load("car_columns.pkl")
 
-temp_df = pd.read_csv('california.csv')
+st.set_page_config(page_title="Car Price Prediction", layout="centered")
 
-temp_df = pd.read_csv('california.csv')
-random.seed(52)
-all_values= []
-for i in temp_df[col]:
-    min_value, max_value = temp_df[i].agg(['min','max'])
+st.title("🚗 Car Price Prediction App")
+st.write("Enter car details to predict the selling price")
 
-    var =st.sidebar.slider(f'Select {i} value', int(min_value), int(max_value),
-                      random.randint(int(min_value),int(max_value)))
-    all_values.append(var)
-ss=StandardScaler()
-ss.fit(temp_df[col])
+# -------------------------
+# User Inputs
+# -------------------------
+company = st.selectbox("Company", ["Audi", "BMW", "Hyundai", "Maruti", "Honda"])
+fuel_type = st.selectbox("Fuel Type", ["Petrol", "Diesel", "CNG"])
+transmission = st.selectbox("Transmission", ["Manual", "Automatic"])
+owner = st.selectbox("Owner Type", ["First", "Second", "Third"])
 
-final_value= ss.transform([all_values])
-with open('house_price_pred_ridge_model.pkl','rb') as f:
-   chatgpt= pickle.load(f)
-price= chatgpt.predict(final_value)[0]
-import time
-st.write(pd.DataFrame(dict(zip(col,all_values)),index =[1]))
+year = st.number_input("Year of Purchase", 2000, 2025, step=1)
+kms_driven = st.number_input("Kilometers Driven", 0, 300000, step=500)
+engine = st.number_input("Engine (CC)", 500, 5000, step=100)
+mileage = st.number_input("Mileage (km/l)", 5.0, 40.0, step=0.5)
 
-progress_bar = st.progress(0)
-placeholder = st.empty()
-placeholder.subheader('Predicting Price')
-place = st.empty()
-place.image('https://i.gifer.com/origin/a3/a3b1fa69178f24498a5250a9612d9e1f_w200.gif',width =70)
-if price>0:
-
-    for i in range(100):
-        time.sleep(0.05)
-        progress_bar.progress(i + 1)
-
-    body = f'Predicted Median House Price: ${round(price,2)} Thousand Dollars'
-    placeholder.empty()
-    place.empty()
-    # st.subheader(body)
-
-    st.success(body)
-else:
-    body = 'Invalid House features Values'
-    st.warning(body)
+# -------------------------
+# Predict Button
+# -------------------------
+if st.button("Predict Price"):
     
-st.markdown('Designed by:**Ashish Luthra**')
+    # Create input dataframe
+    input_data = {
+        "company": company,
+        "fuel_type": fuel_type,
+        "transmission": transmission,
+        "owner": owner,
+        "year": year,
+        "kms_driven": kms_driven,
+        "engine": engine,
+        "mileage": mileage
+    }
 
+    df = pd.DataFrame([input_data])
+
+    # One-hot encoding
+    df_encoded = pd.get_dummies(df)
+
+    # Align columns with training data
+    df_encoded = df_encoded.reindex(columns=columns, fill_value=0)
+
+    # Prediction
+    prediction = model.predict(df_encoded)[0]
+
+    st.success(f"💰 Estimated Car Price: ₹ {round(prediction, 2)}")
 
